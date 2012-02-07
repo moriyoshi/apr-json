@@ -1,0 +1,14 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+APR_MAJOR_VERSION=@APR_MAJOR_VERSION@
+APU_MAJOR_VERSION=@APU_MAJOR_VERSION@
+APJ_MAJOR_VERSION=@APJ_MAJOR_VERSION@
+includedir=@includedir@
+
+Name: APR JSON
+Description: Companion library for APR
+Version: @APRUTIL_DOTTED_VERSION@
+Requires: apr-@APR_MAJOR_VERSION@ apr-util-@APU_MAJOR_VERSION@
+Libs: -L${libdir} -l@APJ_LIBNAME@ @APR_LIBS@ @APU_LIBS@
+Cflags: -I${includedir} @APR_INCLUDES@ @APU_INCLUDES@

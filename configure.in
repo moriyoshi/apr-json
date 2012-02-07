@@ -1,0 +1,167 @@
+dnl
+dnl Process this file with autoconf to produce a configure script
+dnl
+
+AC_PREREQ(2.59)
+AC_INIT(Makefile.in)
+
+AC_CONFIG_AUX_DIR(build)
+AC_CONFIG_HEADER(json/apr_json_private.h)
+
+sinclude(build/find_apr.m4)
+sinclude(build/find_apu.m4)
+sinclude(build/apj_conf.m4)
+sinclude(build/apr_common.m4)
+
+AC_PROG_AWK
+AC_PROG_INSTALL
+
+dnl Generate ./config.nice for reproducing runs of configure
+dnl 
+APR_CONFIG_NICE(config.nice)
+
+dnl # Some initial steps for configuration.  We setup the default directory
+dnl # and which files are to be configured.
+
+dnl Absolute source/build directory
+abs_srcdir=`(cd $srcdir && pwd)`
+abs_builddir=`pwd`
+
+if test "$abs_builddir" != "$abs_srcdir"; then
+  USE_VPATH=1
+  APJ_CONFIG_LOCATION=build
+else
+  APJ_CONFIG_LOCATION=source
+fi
+
+AC_SUBST(APU_CONFIG_LOCATION)
+
+AC_CANONICAL_SYSTEM
+
+AC_PROG_INSTALL
+
+# Use -no-install to link the test programs on all platforms
+# but Darwin, where it would cause the programs to be linked
+# against installed versions of libapr instead of those just
+# built.
+case $host in
+*-apple-darwin*) LT_NO_INSTALL="" ;;
+*) LT_NO_INSTALL="-no-install" ;;
+esac
+AC_SUBST(LT_NO_INSTALL)
+
+dnl
+dnl compute the top directory of the build
+dnl note: this is needed for LIBTOOL and exporting the bundled Expat
+dnl
+top_builddir="$abs_builddir"
+AC_SUBST(top_builddir)
+AC_SUBST(abs_srcdir)
+AC_SUBST(abs_builddir)
+
+dnl Initialize mkdir -p functionality.
+APR_MKDIR_P_CHECK($abs_srcdir/build/mkdir.sh)
+
+dnl get our version information
+get_version="$abs_srcdir/build/get-version.sh"
+version_hdr="$abs_srcdir/include/apj_version.h"
+APJ_MAJOR_VERSION="`$get_version major $version_hdr APJ`"
+APJ_DOTTED_VERSION="`$get_version all $version_hdr APJ`"
+APJ_LT_VERSION="-version-info `$get_version libtool $version_hdr APJ`"
+
+AC_SUBST(APJ_DOTTED_VERSION)
+AC_SUBST(APJ_MAJOR_VERSION)
+AC_SUBST(APJ_LT_VERSION)
+
+echo "APR-json Version: ${APJ_DOTTED_VERSION}"
+
+dnl
+dnl Find the APR includes directory and (possibly) the source (base) dir.
+dnl
+APJ_FIND_APR
+APJ_FIND_APU
+
+dnl copy apr's rules.mk into our build directory.
+if test ! -d $abs_builddir/build ; then
+  mkdir $abs_builddir/build
+fi
+cp $APR_BUILD_DIR/apr_rules.mk $abs_builddir/build/rules.mk
+
+dnl
+dnl set up the compilation flags and stuff
+dnl
+APJ_INCLUDES=
+APJ_PRIV_INCLUDES="-I$abs_builddir/json -I$abs_builddir/include"
+if test -n "$USE_VPATH"; then
+  APJ_PRIV_INCLUDES="$APJ_PRIV_INCLUDES -I$abs_srcdir/json -I$abs_srcdir/include"
+fi
+
+lib_target=$APR_LIB_TARGET
+AC_SUBST(lib_target)
+
+APJ_LIBNAME="aprjson${libsuffix}"
+AC_SUBST(APJ_LIBNAME)
+
+dnl
+dnl Prep all the flags and stuff for compilation and export to other builds
+dnl
+APR_ADDTO(APJ_LIBS, [$APR_LIBS $APU_LIBS])
+
+AC_SUBST(APJ_PRIV_INCLUDES)
+AC_SUBST(APJ_INCLUDES)
+AC_SUBST(APJ_LDFLAGS)
+AC_SUBST(APJ_LIBS)
+AC_SUBST(LDFLAGS)
+
+includedir="${includedir}/apr-${APR_MAJOR_VERSION}"
+
+dnl
+dnl BSD/OS (BSDi) needs to use a different include syntax in the Makefiles
+dnl
+case "$host_alias" in
+*bsdi* | BSD/OS)
+    # Check whether they've installed GNU make
+    if make --version > /dev/null 2>&1; then
+        INCLUDE_RULES="include $abs_builddir/build/rules.mk"
+        INCLUDE_OUTPUTS="include $abs_srcdir/build-outputs.mk"
+    else
+        INCLUDE_RULES=".include \"$abs_builddir/build/rules.mk\""
+        INCLUDE_OUTPUTS=".include \"$abs_srcdir/build-outputs.mk\""
+    fi
+    ;;
+*)
+    INCLUDE_RULES="include $abs_builddir/build/rules.mk"
+    INCLUDE_OUTPUTS="include $abs_srcdir/build-outputs.mk"
+    ;;
+esac
+AC_SUBST(INCLUDE_RULES)
+AC_SUBST(INCLUDE_OUTPUTS)
+
+dnl supportes MinGW
+case "$host_alias" in
+*mingw*)
+    APJ_CPPFLAGS="-DAPJ_DECLARE_EXPORT"
+    ;;
+esac
+AC_SUBST(APJ_CPPFLAGS)
+
+for d in include include/private; do
+    test -d $top_builddir/$d || mkdir $top_builddir/$d
+done
+
+AC_CONFIG_FILES([Makefile
+                 build/pkg/pkginfo
+                 apr-json.pc
+                 apj-$APJ_MAJOR_VERSION-config:apj-config.in])
+
+AC_CONFIG_COMMANDS([default], [
+chmod +x apj-$APJ_MAJOR_VERSION-config
+],[
+APJ_MAJOR_VERSION=$APJ_MAJOR_VERSION
+])
+
+if test -d $srcdir/test; then
+    AC_CONFIG_FILES([test/Makefile])
+fi
+
+AC_OUTPUT

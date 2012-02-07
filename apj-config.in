@@ -1,0 +1,187 @@
+#!/bin/sh
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# APR-JSON script designed to allow easy command line access to APR-JSON
+# configuration parameters.
+
+APJ_MAJOR_VERSION="@APJ_MAJOR_VERSION@"
+APJ_DOTTED_VERSION="@APJ_DOTTED_VERSION@"
+
+prefix="@prefix@"
+exec_prefix="@exec_prefix@"
+bindir="@bindir@"
+libdir="@libdir@"
+includedir="@includedir@"
+
+LIBS="@APJ_LIBS@"
+INCLUDES="@APJ_INCLUDES@"
+LDFLAGS="@APJ_LDFLAGS@"
+
+APJ_LIBNAME="@APJ_LIBNAME@"
+
+APJ_SOURCE_DIR="@abs_srcdir@"
+APJ_BUILD_DIR="@abs_builddir@"
+
+# NOTE: the following line is modified during 'make install': alter with care!
+location=@APJ_CONFIG_LOCATION@
+
+show_usage()
+{
+    cat << EOF
+Usage: apj-$APJ_MAJOR_VERSION-config [OPTION]
+
+Known values for OPTION are:
+  --prefix[=DIR]    change prefix to DIR
+  --bindir          print location where binaries are installed
+  --includes        print include information
+  --includedir      print location where headers are installed
+  --ldflags         print linker flags
+  --libs            print library information
+  --srcdir          print APR-JSON source directory
+  --link-ld         print link switch(es) for linking to APR-JSON
+  --link-libtool    print the libtool inputs for linking to APR-JSON
+  --apj-la-file     print the path to the .la file, if available
+  --version         print APR-JSON's version as a dotted triple
+  --help            print this help
+
+When linking with libtool, an application should do something like:
+  APJ_LIBS="\`apj-$APJ_MAJOR_VERSION-config --link-libtool --libs\`"
+or when linking directly:
+  APJ_LIBS="\`apj-$APJ_MAJOR_VERSION-config --link-ld --libs\`"
+
+An application should use the results of --includes, and --ldflags in
+their build process.
+EOF
+}
+
+if test $# -eq 0; then
+    show_usage
+    exit 1
+fi
+
+if test "$location" = "installed"; then
+    LA_FILE="$libdir/lib${APJ_LIBNAME}.la"
+else
+    LA_FILE="$APJ_BUILD_DIR/lib${APJ_LIBNAME}.la"
+fi
+
+flags=""
+
+while test $# -gt 0; do
+    # Normalize the prefix.
+    case "$1" in
+    -*=*) optarg=`echo "$1" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+    *) optarg= ;;
+    esac
+
+    case "$1" in
+    # It is possible for the user to override our prefix.
+    --prefix=*)
+    prefix=$optarg
+    ;;
+    --prefix)
+    echo $prefix
+    exit 0
+    ;;
+    --bindir)
+    echo $bindir
+    exit 0
+    ;;
+    --libs)
+    flags="$flags $LDAP_LIBS $DBM_LIBS $LIBS"
+    ;;
+    --includedir)
+    if test "$location" = "installed"; then
+        flags="$includedir"
+    elif test "$location" = "source"; then
+        flags="$APJ_SOURCE_DIR/include"
+    else
+        # this is for VPATH builds
+        flags="$APJ_BUILD_DIR/include $APJ_SOURCE_DIR/include"
+    fi
+    echo $flags
+    exit 0
+    ;;
+    --includes)
+    if test "$location" = "installed"; then
+        flags="$flags -I$includedir $INCLUDES"
+    elif test "$location" = "source"; then
+        flags="$flags -I$APJ_SOURCE_DIR/include $INCLUDES"
+    else
+        # this is for VPATH builds
+        flags="$flags -I$APJ_BUILD_DIR/include -I$APJ_SOURCE_DIR/include $INCLUDES"
+    fi
+    ;;
+    --ldflags)
+    flags="$flags $LDFLAGS"
+    ;;
+    --srcdir)
+    echo $APJ_SOURCE_DIR
+    exit 0
+    ;;
+    --version)
+    echo $APJ_DOTTED_VERSION
+    exit 0
+    ;;
+    --link-ld)
+    if test "$location" = "installed"; then
+        ### avoid using -L if libdir is a "standard" location like /usr/lib
+        flags="$flags -L$libdir -l$APJ_LIBNAME"
+    else
+        flags="$flags -L$APJ_BUILD_DIR -l$APJ_LIBNAME"
+    fi
+    ;;
+    --link-libtool)
+    # If the LA_FILE exists where we think it should be, use it.  If we're
+    # installed and the LA_FILE does not exist, assume to use -L/-l
+    # (the LA_FILE may not have been installed).  If we're building ourselves,
+    # we'll assume that at some point the .la file be created.
+    if test -f "$LA_FILE"; then
+        flags="$flags $LA_FILE"
+    elif test "$location" = "installed"; then
+        ### avoid using -L if libdir is a "standard" location like /usr/lib
+        # Since the user is specifying they are linking with libtool, we
+        # *know* that -R will be recognized by libtool.
+        flags="$flags -L$libdir -R$libdir -l$APJ_LIBNAME"
+    else
+        flags="$flags $LA_FILE"
+    fi
+    ;;
+    --apj-la-file)
+    if test -f "$LA_FILE"; then
+        flags="$flags $LA_FILE"
+    fi
+    ;;
+    --help)
+    show_usage
+    exit 0
+    ;;
+    *)
+    show_usage
+    exit 1
+    ;;
+    esac
+
+    # Next please.
+    shift
+done
+
+if test -n "$flags"; then
+  echo "$flags"
+fi
+
+exit 0

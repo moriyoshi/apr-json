@@ -1,0 +1,90 @@
+top_srcdir=@abs_srcdir@
+top_builddir=@abs_builddir@
+VPATH = @srcdir@
+
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+bindir=@bindir@
+libdir=@libdir@
+includedir=@includedir@
+lib_prefix=@prefix@/lib
+
+SOURCE_DIRS = json
+
+INSTALL = @INSTALL@
+INSTALL_DATA = @INSTALL_DATA@
+MKINSTALLDIRS=$(top_srcdir)/build/mkdir.sh
+
+APJ_INCLUDES = @APJ_INCLUDES@
+APJ_PRIV_INCLUDES = @APJ_PRIV_INCLUDES@
+APJ_CPPFLAGS = @APJ_CPPFLAGS@
+APJ_LIBS = @APJ_LIBS@
+APJ_MAJOR_VERSION = @APJ_MAJOR_VERSION@
+APJ_CONFIG = apj-$(APJ_MAJOR_VERSION)-config
+APJ_PCFILE = apr-json-$(APJ_MAJOR_VERSION).pc
+
+INCLUDES = $(APJ_INCLUDES) $(APJ_PRIV_INCLUDES) @APR_INCLUDES@ @APU_INCLUDES@
+
+TARGET_LIB = lib@APJ_LIBNAME@.la
+LT_VERSION = @APJ_LT_VERSION@
+DISTCLEAN_TARGETS = config.cache config.log config.status
+EXTRACLEAN_TARGETS = configure libtool aclocal.m4
+
+TARGETS = $(TARGET_LIB)  apj-config.out
+
+OBJECTS_all = json/apr_json_encode.lo json/apr_json_decode.lo
+
+OBJECTS_unix = $(OBJECTS_all)
+
+OBJECTS_aix = $(OBJECTS_all)
+
+OBJECTS_beos = $(OBJECTS_all)
+
+OBJECTS_os2 = $(OBJECTS_all)
+
+OBJECTS_os390 = $(OBJECTS_all)
+
+OBJECTS_win32 = $(OBJECTS_all)
+
+# bring in rules.mk for standard functionality
+@INCLUDE_RULES@
+
+$(TARGET_LIB): $(OBJECTS)
+	$(LINK) @lib_target@ $(APJ_LDFLAGS)
+
+json/apr_json_encode.lo: json/apr_json_encode.c
+
+json/apr_json_decode.lo: json/apr_json_decode.c
+
+exports.c:
+	$(AWK) -f $(top_srcdir)/build/make_exports.awk $(EXPORT_FILES) > $@
+
+export_vars.h:
+	$(AWK) -f $(top_srcdir)/build/make_var_export.awk $(EXPORT_FILES) > $@
+
+apj-config.out: $(APJ_CONFIG)
+	sed 's,^\(location=\).*$$,\1installed,' < $(APJ_CONFIG) > $@
+
+install:
+	if [ ! -d $(DESTDIR)$(libdir) ]; then \
+	    $(MKINSTALLDIRS) $(DESTDIR)$(libdir); \
+	fi;
+	$(LIBTOOL) --mode=install cp $(TARGET_LIB) $(DESTDIR)$(libdir)
+	if [ ! -d $(DESTDIR)$(includedir) ]; then \
+	    $(MKINSTALLDIRS) $(DESTDIR)$(includedir); \
+	fi;
+	$(INSTALL_DATA) $(top_srcdir)/include/apj_version.h $(DESTDIR)$(includedir)
+	$(INSTALL_DATA) $(top_srcdir)/include/apr_json.h $(DESTDIR)$(includedir)
+	if [ ! -d $(DESTDIR)$(libdir)/pkgconfig ]; then \
+	    $(MKINSTALLDIRS) $(DESTDIR)$(libdir)/pkgconfig; \
+	fi;
+	$(INSTALL_DATA) apr-json.pc $(DESTDIR)$(libdir)/pkgconfig/$(APJ_PCFILE)
+	if [ ! -d $(DESTDIR)$(bindir) ]; then \
+	    $(MKINSTALLDIRS) $(DESTDIR)$(bindir); \
+	fi;
+	$(INSTALL) -m 755 apj-config.out $(DESTDIR)$(bindir)/$(APJ_CONFIG)
+
+dox:
+	doxygen $(top_srcdir)/docs/doxygen.conf
+
+.PHONY: dox

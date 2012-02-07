@@ -1,0 +1,17 @@
+*.la
+*.lo
+*.o
+*.slo
+.deps
+.libs
+Makefile
+apj-0-config
+apj-config.out
+apr-json.pc
+apr-json.spec
+autom4te.cache
+config.log
+config.nice
+config.status
+configure
+json/apr_json_private.h
