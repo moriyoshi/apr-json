@@ -1,0 +1,14 @@
+Apache Portable Runtime JSON Library (APR-JSON)
+-----------------------------------------------
+
+The Apache Portable Runtime JSON Library supplies the long-wanted missing
+piece in the APR library family, JSON serializer / deserializer.
+
+This work was primarily based on Derek Gottfrid's DBSlayer, but the code
+has been significantly improved in various aspects.
+
+While the software is licensed in the Apache License, it is not an official
+Apache project, so please direct feedbacks to me, rather than to the
+developers at apache.org.
+
+Moriyoshi Koizumi <mozo@mozo.jp>
