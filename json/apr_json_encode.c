@@ -28,6 +28,11 @@ static void brigade_append_immortal(apr_bucket_brigade *brigade, const char *buf
     APR_BRIGADE_INSERT_TAIL(brigade, apr_bucket_immortal_create(buf, nbyte, brigade->bucket_alloc));
 }
 
+static void brigade_append_transient(apr_bucket_brigade *brigade, const char *buf, apr_size_t nbyte)
+{
+    APR_BRIGADE_INSERT_TAIL(brigade, apr_bucket_transient_create(buf, nbyte, brigade->bucket_alloc));
+}
+
 static void apr_json_encode_string(apr_json_serializer_t *self, const apr_json_string_t *string)
 {
     const char *p, *e, *chunk;
@@ -35,37 +40,37 @@ static void apr_json_encode_string(apr_json_serializer_t *self, const apr_json_s
     for (p = chunk = string->p, e = string->p + string->len; p < e; p++) {
         switch(*p) {
         case '\n':
-            brigade_append_immortal(self->brigade, chunk, p - chunk);
+            brigade_append_transient(self->brigade, chunk, p - chunk);
             brigade_append_immortal(self->brigade, "\\n", 2);
             chunk = p + 1;
             break;
         case '\r':
-            brigade_append_immortal(self->brigade, chunk, p - chunk);
+            brigade_append_transient(self->brigade, chunk, p - chunk);
             brigade_append_immortal(self->brigade, "\\r", 2);
             chunk = p + 1;
             break;
         case '\t':
-            brigade_append_immortal(self->brigade, chunk, p - chunk);
+            brigade_append_transient(self->brigade, chunk, p - chunk);
             brigade_append_immortal(self->brigade, "\\t", 2);
             chunk = p + 1;
             break;
         case '\b':
-            brigade_append_immortal(self->brigade, chunk, p - chunk);
+            brigade_append_transient(self->brigade, chunk, p - chunk);
             brigade_append_immortal(self->brigade, "\\b", 2);
             chunk = p + 1;
             break;
         case '\f':
-            brigade_append_immortal(self->brigade, chunk, p - chunk);
+            brigade_append_transient(self->brigade, chunk, p - chunk);
             brigade_append_immortal(self->brigade, "\\f", 2);
             chunk = p + 1;
             break;
         case '\\':
-            brigade_append_immortal(self->brigade, chunk, p - chunk);
+            brigade_append_transient(self->brigade, chunk, p - chunk);
             brigade_append_immortal(self->brigade, "\\\\", 2);
             chunk = p + 1;
             break;
         case '"':
-            brigade_append_immortal(self->brigade, chunk, p - chunk);
+            brigade_append_transient(self->brigade, chunk, p - chunk);
             brigade_append_immortal(self->brigade, "\\\"", 2);
             chunk = p + 1;
             break;
@@ -74,7 +79,7 @@ static void apr_json_encode_string(apr_json_serializer_t *self, const apr_json_s
         }
     }
     if (chunk < p)
-        brigade_append_immortal(self->brigade, chunk, p - chunk);
+        brigade_append_transient(self->brigade, chunk, p - chunk);
     brigade_append_immortal(self->brigade, "\"", 1);
 }
 
