@@ -35,62 +35,59 @@ extern "C" {
 
 /**
  * @defgroup APR_JSON JSON functions
- * @ingroup APR_JSON
  * @{
  */
 
 /**
- * APJ_DECLARE_EXPORT is defined when building the APR-UTIL dynamic library,
+ * APJ_DECLARE_EXPORT is defined when building the APR-JSON dynamic library,
  * so that all public symbols are exported.
  *
- * APJ_DECLARE_STATIC is defined when including the APR-UTIL public headers,
+ * APJ_DECLARE_STATIC is defined when including the APR-JSON public headers,
  * to provide static linkage when the dynamic library may be unavailable.
  *
  * APJ_DECLARE_STATIC and APJ_DECLARE_EXPORT are left undefined when
- * including the APR-UTIL public headers, to import and link the symbols from 
- * the dynamic APR-UTIL library and assure appropriate indirection and calling
+ * including the APR-JSON public headers, to import and link the symbols from 
+ * the dynamic APR-JSON library and assure appropriate indirection and calling
  * conventions at compile time.
  */
 
+#if defined(DOXYGEN) || !defined(WIN32)
 /**
- * The public APR-UTIL functions are declared with APJ_DECLARE(), so they may
+ * The public APR-JSON functions are declared with APJ_DECLARE(), so they may
  * use the most appropriate calling convention.  Public APR functions with 
  * variable arguments must use APJ_DECLARE_NONSTD().
- *
- * @fn APJ_DECLARE(rettype) apr_func(args);
  */
 #define APJ_DECLARE(type)            type
 /**
- * The public APR-UTIL functions using variable arguments are declared with 
+ * The public APR-JSON functions using variable arguments are declared with 
  * APJ_DECLARE_NONSTD(), as they must use the C language calling convention.
- *
- * @fn APJ_DECLARE_NONSTD(rettype) apr_func(args, ...);
  */
 #define APJ_DECLARE_NONSTD(type)     type
 /**
- * The public APR-UTIL variables are declared with APJ_DECLARE_DATA.
+ * The public APR-JSON variables are declared with APJ_DECLARE_DATA.
  * This assures the appropriate indirection is invoked at compile time.
  *
- * @fn APJ_DECLARE_DATA type apr_variable;
  * @note APJ_DECLARE_DATA extern type apr_variable; syntax is required for
  * declarations within headers to properly import the variable.
  */
 #define APJ_DECLARE_DATA
-
-#if !defined(WIN32) || defined(APJ_MODULE_DECLARE_STATIC)
-/**
- * Declare a dso module's exported module structure as APJ_MODULE_DECLARE_DATA.
- *
- * Unless APJ_MODULE_DECLARE_STATIC is defined at compile time, symbols 
- * declared with APJ_MODULE_DECLARE_DATA are always exported.
- * @code
- * module APJ_MODULE_DECLARE_DATA mod_tag
- * @endcode
- */
-#define APJ_MODULE_DECLARE_DATA
 #else
-#define APJ_MODULE_DECLARE_DATA           __declspec(dllexport)
+
+#if defined(APJ_MODULE_DECLARE_STATIC)
+#define APJ_DECLARE(type)            type __stdcall
+#define APJ_DECLARE_NONSTD(type)     type __cdecl
+#define APJ_DECLARE_DATA
+#elif defined(APJ_DECLARE_EXPORT)
+#define APJ_DECLARE(type)            __declspec(dllexport) type __stdcall
+#define APJ_DECLARE_NONSTD(type)     __declspec(dllexport) type __cdecl
+#define APJ_DECLARE_DATA             __declspec(dllexport)
+#else
+#define APJ_DECLARE(type)            __declspec(dllimport) type __stdcall
+#define APJ_DECLARE_NONSTD(type)     __declspec(dllimport) type __cdecl
+#define APJ_DECLARE_DATA             __declspec(dllimport)
 #endif
+
+#endif /* defined(DOXYGEN) || !defined(WIN32) */
 
 /**
  * Enum that represents the type of the given JSON value.
@@ -109,7 +106,9 @@ typedef enum apr_json_type_e {
  * A structure to hold a JSON string.
  */
 typedef struct apr_json_string_t {
+    /** pointer to the buffer */
 	const char *p;
+    /** string length */
     apr_size_t len;
 } apr_json_string_t;
 
@@ -117,7 +116,9 @@ typedef struct apr_json_string_t {
  * A structure that holds a JSON value.
  */
 typedef struct apr_json_value_t {
+    /** type of the value */
 	apr_json_type_e type;
+    /** actual value. which member is valid depends on type. */
 	union {
 		apr_hash_t *object;
 		apr_array_header_t *array;
@@ -128,8 +129,22 @@ typedef struct apr_json_value_t {
 	} value;
 } apr_json_value_t;
 
+/**
+ * Decode utf8-encoded JSON string into apr_json_value_t
+ * @param retval the result
+ * @param injson utf8-encoded JSON string.
+ * @param size length of the input string.
+ * @param pool pool used to allocate the result from.
+ */
 APJ_DECLARE(apr_status_t) apr_json_decode(apr_json_value_t **retval, const char *injson, apr_size_t size, apr_pool_t *pool);
  
+/**
+ * Encode data represented as apr_json_value_t to utf8-encoded JSON string
+ * and append it to the specified brigade
+ * @param brigade brigade the result will be appended to.
+ * @param json the JSON data.
+ * @param pool pool used to allocate the buckets from.
+ */
 APJ_DECLARE(void) apr_json_encode(apr_bucket_brigade *brigade, const apr_json_value_t *json, apr_pool_t *pool);
 
 /** @} */
