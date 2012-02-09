@@ -109,14 +109,14 @@ static void apr_json_encode_object(apr_json_serializer_t *self, apr_hash_t *obje
         apr_hash_this(i, (const void **)&key, &key_len, (void **)&value);
 
         if (!first)
-            brigade_append_immortal(self->brigade, ", ", 2);
+            brigade_append_immortal(self->brigade, ",", 1);
         {
             apr_json_string_t key_str = { key, key_len };
             apr_json_encode_string(self, &key_str);
-            brigade_append_immortal(self->brigade, ": ", 2);
+            brigade_append_immortal(self->brigade, ":", 1);
             apr_json_encode_value(self, value);
         }
-        first = 1;
+        first = 0;
     }
     brigade_append_immortal(self->brigade, "}", 1);
 }
