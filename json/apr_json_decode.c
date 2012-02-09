@@ -100,7 +100,6 @@ static apr_status_t apr_json_decode_string(apr_json_scanner_t *self, apr_json_st
             } else {
                 string.len++;
                 p++;
-                break;
             }
         }
         else {
@@ -122,7 +121,7 @@ static apr_status_t apr_json_decode_string(apr_json_scanner_t *self, apr_json_st
         switch (*(unsigned char *)p) {
         case '\\':
             p++;
-            switch(*p) { 
+            switch(*p) {
             case 'u':
                 /* THIS IS REQUIRED TO BE A 4 DIGIT HEX NUMBER */
                 {
@@ -307,8 +306,16 @@ static apr_status_t apr_json_decode_array(apr_json_scanner_t *self, apr_array_he
         apr_json_value_t *element;
         json_link_t *new_node;
 
+        while (self->p < self->e && isspace(*(unsigned char *)self->p))
+            self->p++;
+
         if (self->p == self->e) {
             status = APR_EOF;
+            goto out;
+        }
+
+        if (*self->p == ']') {
+            self->p++;
             break;
         }
 
@@ -335,14 +342,11 @@ static apr_status_t apr_json_decode_array(apr_json_scanner_t *self, apr_array_he
             goto out;
         }
 
-        {
-            char c = *self->p++;
-            if (c == ']')
-                break;
-            else if (c != ',') {
-                status = APR_EGENERAL;
-                goto out;
-            }
+        if (*self->p == ',') {
+            self->p++;
+        } else if (*self->p != ']') {
+            status = APR_EGENERAL;
+            goto out;
         }
     }
 
@@ -379,6 +383,11 @@ static apr_status_t apr_json_decode_object(apr_json_scanner_t *self, apr_hash_t 
         if (self->p == self->e) {
             status = APR_EOF;
             goto out;
+        }
+
+        if (*self->p == '}') {
+            self->p++;
+            break;
         }
 
         if (*self->p != '"') {
@@ -425,14 +434,11 @@ static apr_status_t apr_json_decode_object(apr_json_scanner_t *self, apr_hash_t 
             goto out;
         }
 
-        {
-            char c = *self->p++;
-            if (c == '}')
-                break;
-            else if (c != ',') {
-                status = APR_EGENERAL;
-                goto out;
-            }
+        if (*self->p == ',') {
+            self->p++;
+        } else if (*self->p != '}') {
+            status = APR_EGENERAL;
+            goto out;
         }
     }
 
